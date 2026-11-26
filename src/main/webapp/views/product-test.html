@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Giao Diện Quản Lý Sản Phẩm — PolyCoffee</title>
+    <link rel="stylesheet" href="css/product-manage.css">
+</head>
+
+<body>
+    <div class="container">
+        <div class="page-header">
+            <div>
+                <h1>Quản Lý Sản Phẩm (Bản Test HTML)</h1>
+                <p class="subtitle">Mở trực tiếp trên trình duyệt để test giao diện &amp; nút Thêm - Sửa - Xóa</p>
+            </div>
+            <button type="button" id="btnReload" class="btn btn-reset">Reset dữ liệu mẫu</button>
+        </div>
+
+        <div id="alertBox" class="alert alert-success" style="display: none;"></div>
+
+        <div class="card">
+            <h2>Thông tin sản phẩm</h2>
+            <form id="productForm">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="id">ID sản phẩm</label>
+                        <input type="number" id="id" name="id" readonly placeholder="Tự tăng khi thêm mới">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="categoryId">Danh mục (categoryId)</label>
+                        <select id="categoryId" name="categoryId">
+                            <option value="1">1 - Cà phê</option>
+                            <option value="2">2 - Trà trái cây</option>
+                            <option value="3">3 - Đá xay</option>
+                            <option value="4">4 - Bánh ngọt</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="name">Tên sản phẩm</label>
+                        <input type="text" id="name" name="name" placeholder="Ví dụ: Cà phê sữa đá" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="imageUrl">Đường dẫn ảnh (imageUrl)</label>
+                        <input type="text" id="imageUrl" name="imageUrl"
+                            placeholder="Ví dụ: https://... hoặc images/cf.jpg">
+                    </div>
+
+                    <div class="form-group full-width">
+                        <label for="description">Mô tả sản phẩm</label>
+                        <textarea id="description" name="description" rows="2"
+                            placeholder="Nhập mô tả ngắn cho sản phẩm..."></textarea>
+                    </div>
+
+                    <div class="form-group full-width">
+                        <div class="checkbox-row">
+                            <input type="checkbox" id="available" name="available" checked>
+                            <label for="available">Đang kinh doanh (available)</label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="btn-group">
+                    <button type="button" id="btnAdd" class="btn btn-add">Thêm mới</button>
+                    <button type="button" id="btnUpdate" class="btn btn-update">Cập nhật</button>
+                    <button type="button" id="btnDelete" class="btn btn-delete">Xóa</button>
+                    <button type="button" id="btnClear" class="btn btn-reset">Làm mới form</button>
+                </div>
+            </form>
+        </div>
+
+        <div class="card">
+            <div class="toolbar">
+                <h2 style="margin: 0;">Danh sách sản phẩm</h2>
+                <div class="search-form">
+                    <input type="text" id="searchInput" placeholder="Tìm theo tên sản phẩm...">
+                </div>
+            </div>
+
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Tên sản phẩm</th>
+                            <th>Mã DM</th>
+                            <th>Mô tả</th>
+                            <th>Trạng thái</th>
+                            <th>Thao tác</th>
+                        </tr>
+                    </thead>
+                    <tbody id="productTableBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const defaultData = [
+            { id: 1, categoryId: 1, name: "Cà phê đen đá", description: "Đậm vị truyền thống", imageUrl: "", available: true },
+            { id: 2, categoryId: 1, name: "Bạc xỉu đá", description: "Nhiều sữa, thơm nhẹ cà phê", imageUrl: "", available: true },
+            { id: 3, categoryId: 2, name: "Trà đào cam sả", description: "Thanh mát, có miếng đào", imageUrl: "", available: false }
+        ];
+
+        let products = JSON.parse(JSON.stringify(defaultData));
+        let nextId = 4;
+
+        const idEl = document.getElementById("id");
+        const categoryIdEl = document.getElementById("categoryId");
+        const nameEl = document.getElementById("name");
+        const imageUrlEl = document.getElementById("imageUrl");
+        const descriptionEl = document.getElementById("description");
+        const availableEl = document.getElementById("available");
+        const alertBox = document.getElementById("alertBox");
+        const tbody = document.getElementById("productTableBody");
+        const searchInput = document.getElementById("searchInput");
+
+        function showAlert(msg, isError = false) {
+            alertBox.textContent = msg;
+            alertBox.className = "alert " + (isError ? "alert-error" : "alert-success");
+            alertBox.style.display = "block";
+        }
+
+        function clearForm() {
+            idEl.value = "";
+            categoryIdEl.value = "1";
+            nameEl.value = "";
+            imageUrlEl.value = "";
+            descriptionEl.value = "";
+            availableEl.checked = true;
+        }
+
+        function renderTable() {
+            const kw = searchInput.value.trim().toLowerCase();
+            const filtered = products.filter(p => p.name.toLowerCase().includes(kw));
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="empty-row">Không có sản phẩm nào.</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = filtered.map(p => `
+            <tr>
+                <td>${p.id}</td>
+                <td><strong>${p.name}</strong></td>
+                <td>${p.categoryId}</td>
+                <td>${p.description || ""}</td>
+                <td>
+                    <span class="badge ${p.available ? "badge-active" : "badge-inactive"}">
+                        ${p.available ? "Đang bán" : "Ngừng bán"}
+                    </span>
+                </td>
+                <td class="actions-cell">
+                    <button type="button" class="btn btn-update btn-sm" onclick="selectProduct(${p.id})">Sửa</button>
+                    <button type="button" class="btn btn-delete btn-sm" onclick="deleteProduct(${p.id})">Xóa</button>
+                </td>
+            </tr>
+        `).join("");
+        }
+
+        window.selectProduct = function (id) {
+            const p = products.find(item => item.id === id);
+            if (!p) return;
+            idEl.value = p.id;
+            categoryIdEl.value = p.categoryId;
+            nameEl.value = p.name;
+            imageUrlEl.value = p.imageUrl;
+            descriptionEl.value = p.description;
+            availableEl.checked = p.available;
+            showAlert("Đang chọn sản phẩm #" + p.id + " để chỉnh sửa.");
+        };
+
+        window.deleteProduct = function (id) {
+            if (!confirm("Bạn có chắc muốn xóa sản phẩm #" + id + "?")) return;
+            products = products.filter(item => item.id !== id);
+            if (Number(idEl.value) === id) clearForm();
+            renderTable();
+            showAlert("Đã xóa sản phẩm #" + id + ".");
+        };
+
+        document.getElementById("btnAdd").addEventListener("click", () => {
+            const name = nameEl.value.trim();
+            if (!name) {
+                showAlert("Vui lòng nhập tên sản phẩm!", true);
+                return;
+            }
+            const newItem = {
+                id: nextId++,
+                categoryId: Number(categoryIdEl.value),
+                name,
+                imageUrl: imageUrlEl.value.trim(),
+                description: descriptionEl.value.trim(),
+                available: availableEl.checked
+            };
+            products.unshift(newItem);
+            clearForm();
+            renderTable();
+            showAlert("Đã thêm sản phẩm mới: " + newItem.name);
+        });
+
+        document.getElementById("btnUpdate").addEventListener("click", () => {
+            const id = Number(idEl.value);
+            const item = products.find(p => p.id === id);
+            if (!item) {
+                showAlert("Vui lòng bấm 'Sửa' ở một dòng trong bảng trước khi cập nhật!", true);
+                return;
+            }
+            const name = nameEl.value.trim();
+            if (!name) {
+                showAlert("Tên sản phẩm không được để trống!", true);
+                return;
+            }
+            item.categoryId = Number(categoryIdEl.value);
+            item.name = name;
+            item.imageUrl = imageUrlEl.value.trim();
+            item.description = descriptionEl.value.trim();
+            item.available = availableEl.checked;
+            renderTable();
+            showAlert("Đã cập nhật sản phẩm #" + id + ".");
+        });
+
+        document.getElementById("btnDelete").addEventListener("click", () => {
+            const id = Number(idEl.value);
+            if (!id) {
+                showAlert("Vui lòng chọn một sản phẩm để xóa!", true);
+                return;
+            }
+            window.deleteProduct(id);
+        });
+
+        document.getElementById("btnClear").addEventListener("click", () => {
+            clearForm();
+            alertBox.style.display = "none";
+        });
+
+        document.getElementById("btnReload").addEventListener("click", () => {
+            products = JSON.parse(JSON.stringify(defaultData));
+            nextId = 4;
+            clearForm();
+            renderTable();
+            showAlert("Đã khôi phục dữ liệu mẫu.");
+        });
+
+        searchInput.addEventListener("input", renderTable);
+        renderTable();
+    </script>
+</body>
+
+</html>

@@ -25,7 +25,7 @@ public class ProductDAO implements CrudDAO<Product, Integer> {
     }
 
     // Đóng kết nối an toàn sau khi dùng JdbcUtil.executeQuery
-    private void closeQuietly(ResultSet rs) {
+    private void closeResultSet(ResultSet rs) {
         if (rs != null) {
             try {
                 Statement st = rs.getStatement();
@@ -55,10 +55,34 @@ public class ProductDAO implements CrudDAO<Product, Integer> {
                     entity.isAvailable()
             );
         } catch (SQLException e) {
-            e.printStackTrace();
-            return 0;
+            throw new RuntimeException("Lỗi thêm mới Product", e);
         }
     }
+
+    public int createReturningId(Product entity) {
+        String sql = "INSERT INTO products (category_id, name, description, image_url, is_available) "
+                   + "VALUES (?, ?, ?, ?, ?) RETURNING id";
+        ResultSet rs = null;
+        try {
+            rs = JdbcUtil.executeQuery(
+                    sql,
+                    entity.getCategoryId(),
+                    entity.getName(),
+                    entity.getDescription(),
+                    entity.getImageUrl(),
+                    entity.isAvailable()
+            );
+            if (rs.next()) {
+                return rs.getInt("id");
+            }
+            throw new RuntimeException("Không lấy được ID sau khi thêm mới Product");
+        } catch (SQLException e) {
+            throw new RuntimeException("Lỗi thêm mới Product", e);
+        } finally {
+            closeResultSet(rs);
+        }
+    }
+
 
     @Override
     public int update(Product entity) {
@@ -74,8 +98,7 @@ public class ProductDAO implements CrudDAO<Product, Integer> {
                     entity.getId()
             );
         } catch (SQLException e) {
-            e.printStackTrace();
-            return 0;
+            throw new RuntimeException("Lỗi cập nhật Product", e);
         }
     }
 
@@ -101,8 +124,8 @@ public class ProductDAO implements CrudDAO<Product, Integer> {
             }
         } catch (SQLException e) {
             e.printStackTrace();
-        } finally {
-            closeQuietly(rs);
+         } finally {
+            closeResultSet(rs);
         }
         return 0;
     }
@@ -119,7 +142,7 @@ public class ProductDAO implements CrudDAO<Product, Integer> {
         } catch (SQLException e) {
             e.printStackTrace();
         } finally {
-            closeQuietly(rs);
+            closeResultSet(rs);
         }
         return list;
     }
@@ -139,15 +162,21 @@ public class ProductDAO implements CrudDAO<Product, Integer> {
 
         // Lấy các món đang bán (is_available = true)
     public List<Product> findAllAvailable() {
-        String sql = "SELECT * FROM products WHERE is_available = TRUE ORDER BY id ASC";
-        return findBySql(sql);
-    }
+    String sql = "SELECT p.* FROM products p "
+               + "JOIN categories c ON p.category_id = c.id "
+               + "WHERE p.is_available = TRUE AND c.is_active = TRUE "
+               + "ORDER BY p.id ASC";
+    return findBySql(sql);
+}
 
     // Lọc món theo danh mục
-    public List<Product> findByCategoryId(int categoryId) {
-        String sql = "SELECT * FROM products WHERE category_id = ? ORDER BY id ASC";
-        return findBySql(sql, categoryId);
-    }
+    public List<Product> findAvailableByCategoryId(int categoryId) {
+    String sql = "SELECT p.* FROM products p "
+               + "JOIN categories c ON p.category_id = c.id "
+               + "WHERE p.category_id = ? AND p.is_available = TRUE AND c.is_active = TRUE "
+               + "ORDER BY p.id ASC";
+    return findBySql(sql, categoryId);
+}
 
     // Tìm kiếm món theo tên (dùng ILIKE để không phân biệt hoa/thường trong PostgreSQL)
     public List<Product> searchByName(String keyword) {

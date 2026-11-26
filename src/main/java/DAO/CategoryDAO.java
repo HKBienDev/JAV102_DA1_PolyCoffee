@@ -14,27 +14,20 @@ public class CategoryDAO implements CrudDAO<Category, Integer> {
     private Category mapRow(ResultSet rs) throws SQLException {
         return Category.builder()
         .id(rs.getInt("id"))
-        .name(rs.géttring("name"))
+        .name(rs.getString("name"))
         .description(rs.getString("description"))
         .active(rs.getBoolean("is_active"))
         .build();
     }
-    private void closeQuietly(ResultSet rs) {
-        if (rs != null) {
-            try {
-                Statement st = rs.getStatement();
-                Connection conn = (st != null) ? st.getConnection() : null;
-                rs.close();
-                if (st != null) {
-                    st.close();
-                }
-                if (conn != null) {
-                    conn.close();
-                }
-            } catch (SQLException e) {
-                e.printStackTrace();
-            }
-        }
+    private void closeResultSet(ResultSet rs) {
+        if (rs == null) return;
+        Statement stmt = null;
+        Connection conn = null;
+        try { stmt = rs.getStatement(); } catch (SQLException ignored) {}
+        try { if (stmt != null) conn = stmt.getConnection(); } catch (SQLException ignored) {}
+        try { rs.close(); } catch (SQLException e) { e.printStackTrace(); }
+        try { if (stmt != null) stmt.close(); } catch (SQLException e) { e.printStackTrace(); }
+        try { if (conn != null) conn.close(); } catch (SQLException e) { e.printStackTrace(); }
     }
 
         @Override
@@ -48,8 +41,7 @@ public class CategoryDAO implements CrudDAO<Category, Integer> {
                     entity.isActive()
             );
         } catch (SQLException e) {
-            e.printStackTrace();
-            return 0;
+            throw new RuntimeException("Lỗi thêm mới Category", e);
         }
     }
 
@@ -65,8 +57,7 @@ public class CategoryDAO implements CrudDAO<Category, Integer> {
                     entity.getId()
             );
         } catch (SQLException e) {
-            e.printStackTrace();
-            return 0;
+            throw new RuntimeException("Lỗi cập nhật Category", e);
         }
     }
 
@@ -76,8 +67,7 @@ public class CategoryDAO implements CrudDAO<Category, Integer> {
         try {
             return JdbcUtil.executeUpdate(sql, id);
         } catch (SQLException e) {
-            e.printStackTrace();
-            return 0;
+            throw new RuntimeException("Lỗi xóa Category", e);
         }
     }
 
@@ -93,7 +83,7 @@ public class CategoryDAO implements CrudDAO<Category, Integer> {
         } catch (SQLException e) {
             e.printStackTrace();
         } finally {
-            closeQuietly(rs);
+            closeResultSet(rs);
         }
         return 0;
     }
@@ -110,7 +100,7 @@ public class CategoryDAO implements CrudDAO<Category, Integer> {
         } catch (SQLException e) {
             e.printStackTrace();
         } finally {
-            closeQuietly(rs);
+            closeResultSet(rs);
         }
         return list;
     }
@@ -139,7 +129,7 @@ public class CategoryDAO implements CrudDAO<Category, Integer> {
         if (name == null || name.isBlank()) {
             return false;
         }
-        String sql = "SELECT COUNT(*) FROM categories WHERE TRIM(name) ILIKE TRIM(?)";
+        String sql = "SELECT COUNT(*) FROM categories WHERE LOWER(TRIM(name)) = LOWER(TRIM(?))";
         ResultSet rs = null;
         try {
             rs = JdbcUtil.executeQuery(sql, name);
@@ -147,11 +137,38 @@ public class CategoryDAO implements CrudDAO<Category, Integer> {
                 return rs.getInt(1) > 0;
             }
         } catch (SQLException e) {
-            e.printStackTrace();
+            throw new RuntimeException("Lỗi kiểm tra trùng tên Category", e);
         } finally {
-            closeQuietly(rs);
+            closeResultSet(rs);
         }
         return false;
     }
-}
     
+public boolean existsByNameExcludeId(String name, int excludeId) {
+        if (name == null || name.isBlank()) {
+            return false;
+        }
+        String sql = "SELECT COUNT(*) FROM categories WHERE LOWER(TRIM(name)) = LOWER(TRIM(?)) AND id <> ?";
+        ResultSet rs = null;
+        try {
+            rs = JdbcUtil.executeQuery(sql, name, excludeId);
+            if (rs.next()) {
+                return rs.getInt(1) > 0;
+            }
+        } catch (SQLException e) {
+            throw new RuntimeException("Lỗi kiểm tra trùng tên Category khi cập nhật", e);
+        } finally {
+            closeResultSet(rs);
+        }
+        return false;
+    }
+    // [MỚI BỔ SUNG] Xóa mềm: bật/tắt trạng thái hoạt động của danh mục
+    public int updateActive(int id, boolean isActive) {
+        String sql = "UPDATE categories SET is_active = ? WHERE id = ?";
+        try {
+            return JdbcUtil.executeUpdate(sql, isActive, id);
+        } catch (SQLException e) {
+            throw new RuntimeException("Lỗi cập nhật trạng thái Category", e);
+        }
+    }
+}

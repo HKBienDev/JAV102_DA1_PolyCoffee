@@ -99,24 +99,42 @@ public class RoleDAO implements CrudDAO<Role, Integer> {
     }
 
     public Role findByName(String name) {
-        List<Role> list = findBySql("SELECT * FROM roles WHERE name = ?", name);
+        if (name == null || name.isBlank()) {
+            return null;
+        }
+        String sql = "SELECT * FROM roles WHERE UPPER(TRIM(name)) = UPPER(TRIM(?))";
+        List<Role> list = findBySql(sql, name);
         return list.isEmpty() ? null : list.get(0);
     }
 
     private void closeResultSet(ResultSet rs) {
-        if (rs == null) {
+        if (rs == null)
             return;
+        Statement stmt = null;
+        Connection conn = null;
+        try {
+            stmt = rs.getStatement();
+        } catch (SQLException ignored) {
         }
         try {
-            Statement stmt = rs.getStatement();
-            Connection conn = (stmt != null) ? stmt.getConnection() : null;
+            if (stmt != null)
+                conn = stmt.getConnection();
+        } catch (SQLException ignored) {
+        }
+        try {
             rs.close();
-            if (stmt != null) {
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        try {
+            if (stmt != null)
                 stmt.close();
-            }
-            if (conn != null) {
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        try {
+            if (conn != null)
                 conn.close();
-            }
         } catch (SQLException e) {
             e.printStackTrace();
         }

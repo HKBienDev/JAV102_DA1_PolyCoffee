@@ -12,9 +12,8 @@ import utils.JdbcUtil;
 
 public class OrderItemDAO implements CrudDAO<OrderItem, Integer> {
 
-    private static final String BASE_SQL =
-            "SELECT id, order_id, product_size_id, quantity, unit_price, sugar_level, ice_level, subtotal "
-          + "FROM order_items";
+    private static final String BASE_SQL = "SELECT id, order_id, product_size_id, quantity, unit_price, sugar_level, ice_level, subtotal "
+            + "FROM order_items";
 
     @Override
     public int create(OrderItem e) {
@@ -22,12 +21,12 @@ public class OrderItemDAO implements CrudDAO<OrderItem, Integer> {
                 + "VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING id";
         ResultSet rs = null;
         try {
-            rs = JdbcUtil.executeQuery(sql, 
-            		e.getOrderId(), e.getProductSizeId(), 
-            		e.getQuantity(),
-                    e.getUnitPrice(), 
-                    e.getSugarLevel(), 
-                    e.getIceLevel(), 
+            rs = JdbcUtil.executeQuery(sql,
+                    e.getOrderId(), e.getProductSizeId(),
+                    e.getQuantity(),
+                    e.getUnitPrice(),
+                    e.getSugarLevel(),
+                    e.getIceLevel(),
                     e.getSubtotal());
             if (rs.next()) {
                 e.setId(rs.getInt("id"));
@@ -45,14 +44,14 @@ public class OrderItemDAO implements CrudDAO<OrderItem, Integer> {
     public int update(OrderItem e) {
         String sql = "UPDATE order_items SET order_id=?, product_size_id=?, quantity=?, unit_price=?, "
                 + "sugar_level=?, ice_level=?, subtotal=? WHERE id=?";
-        return execUpdate(sql, 
-        		e.getOrderId(), 
-        		e.getProductSizeId(), 
-        		e.getQuantity(),
-                e.getUnitPrice(), 
-                e.getSugarLevel(), 
-                e.getIceLevel(), 
-                e.getSubtotal(), 
+        return execUpdate(sql,
+                e.getOrderId(),
+                e.getProductSizeId(),
+                e.getQuantity(),
+                e.getUnitPrice(),
+                e.getSugarLevel(),
+                e.getIceLevel(),
+                e.getSubtotal(),
                 e.getId());
     }
 
@@ -132,10 +131,14 @@ public class OrderItemDAO implements CrudDAO<OrderItem, Integer> {
     }
 
     private void close(ResultSet rs) {
-        if (rs == null) return;
+        if (rs == null)
+            return;
         try {
             Statement st = rs.getStatement();
-            try (Connection c = (st != null ? st.getConnection() : null)) { rs.close(); }
-        } catch (SQLException ignored) {}
+            try (Connection c = (st != null ? st.getConnection() : null)) {
+                rs.close();
+            }
+        } catch (SQLException ignored) {
+        }
     }
 }

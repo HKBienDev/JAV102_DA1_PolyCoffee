@@ -13,24 +13,47 @@ import utils.JdbcUtil;
 public class CategoryDAO implements CrudDAO<Category, Integer> {
     private Category mapRow(ResultSet rs) throws SQLException {
         return Category.builder()
-        .id(rs.getInt("id"))
-        .name(rs.getString("name"))
-        .description(rs.getString("description"))
-        .active(rs.getBoolean("is_active"))
-        .build();
-    }
-    private void closeResultSet(ResultSet rs) {
-        if (rs == null) return;
-        Statement stmt = null;
-        Connection conn = null;
-        try { stmt = rs.getStatement(); } catch (SQLException ignored) {}
-        try { if (stmt != null) conn = stmt.getConnection(); } catch (SQLException ignored) {}
-        try { rs.close(); } catch (SQLException e) { e.printStackTrace(); }
-        try { if (stmt != null) stmt.close(); } catch (SQLException e) { e.printStackTrace(); }
-        try { if (conn != null) conn.close(); } catch (SQLException e) { e.printStackTrace(); }
+                .id(rs.getInt("id"))
+                .name(rs.getString("name"))
+                .description(rs.getString("description"))
+                .active(rs.getBoolean("is_active"))
+                .build();
     }
 
-        @Override
+    private void closeResultSet(ResultSet rs) {
+        if (rs == null)
+            return;
+        Statement stmt = null;
+        Connection conn = null;
+        try {
+            stmt = rs.getStatement();
+        } catch (SQLException ignored) {
+        }
+        try {
+            if (stmt != null)
+                conn = stmt.getConnection();
+        } catch (SQLException ignored) {
+        }
+        try {
+            rs.close();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        try {
+            if (stmt != null)
+                stmt.close();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        try {
+            if (conn != null)
+                conn.close();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+    @Override
     public int create(Category entity) {
         String sql = "INSERT INTO categories (name, description, is_active) VALUES (?, ?, ?)";
         try {
@@ -38,8 +61,7 @@ public class CategoryDAO implements CrudDAO<Category, Integer> {
                     sql,
                     entity.getName(),
                     entity.getDescription(),
-                    entity.isActive()
-            );
+                    entity.isActive());
         } catch (SQLException e) {
             throw new RuntimeException("Lỗi thêm mới Category", e);
         }
@@ -54,8 +76,7 @@ public class CategoryDAO implements CrudDAO<Category, Integer> {
                     entity.getName(),
                     entity.getDescription(),
                     entity.isActive(),
-                    entity.getId()
-            );
+                    entity.getId());
         } catch (SQLException e) {
             throw new RuntimeException("Lỗi cập nhật Category", e);
         }
@@ -71,7 +92,7 @@ public class CategoryDAO implements CrudDAO<Category, Integer> {
         }
     }
 
-        @Override
+    @Override
     public int count() {
         String sql = "SELECT COUNT(*) FROM categories";
         ResultSet rs = null;
@@ -80,12 +101,12 @@ public class CategoryDAO implements CrudDAO<Category, Integer> {
             if (rs.next()) {
                 return rs.getInt(1);
             }
+            return 0;
         } catch (SQLException e) {
-            e.printStackTrace();
+            throw new RuntimeException("Lỗi đếm Category", e);
         } finally {
             closeResultSet(rs);
         }
-        return 0;
     }
 
     @Override
@@ -97,12 +118,12 @@ public class CategoryDAO implements CrudDAO<Category, Integer> {
             while (rs.next()) {
                 list.add(mapRow(rs));
             }
+            return list;
         } catch (SQLException e) {
-            e.printStackTrace();
+            throw new RuntimeException("Lỗi truy vấn Category", e);
         } finally {
             closeResultSet(rs);
         }
-        return list;
     }
 
     @Override
@@ -118,13 +139,14 @@ public class CategoryDAO implements CrudDAO<Category, Integer> {
         return list.isEmpty() ? null : list.get(0);
     }
 
-        // Lấy các danh mục đang hoạt động để hiển thị lên menu
+    // Lấy các danh mục đang hoạt động để hiển thị lên menu
     public List<Category> findAllActive() {
         String sql = "SELECT * FROM categories WHERE is_active = TRUE ORDER BY id ASC";
         return findBySql(sql);
     }
 
-    // Kiểm tra trùng tên danh mục (không phân biệt hoa/thường và khoảng trắng đầu/cuối)
+    // Kiểm tra trùng tên danh mục (không phân biệt hoa/thường và khoảng trắng
+    // đầu/cuối)
     public boolean existsByName(String name) {
         if (name == null || name.isBlank()) {
             return false;
@@ -143,8 +165,8 @@ public class CategoryDAO implements CrudDAO<Category, Integer> {
         }
         return false;
     }
-    
-public boolean existsByNameExcludeId(String name, int excludeId) {
+
+    public boolean existsByNameExcludeId(String name, int excludeId) {
         if (name == null || name.isBlank()) {
             return false;
         }
@@ -162,6 +184,7 @@ public boolean existsByNameExcludeId(String name, int excludeId) {
         }
         return false;
     }
+
     // [MỚI BỔ SUNG] Xóa mềm: bật/tắt trạng thái hoạt động của danh mục
     public int updateActive(int id, boolean isActive) {
         String sql = "UPDATE categories SET is_active = ? WHERE id = ?";

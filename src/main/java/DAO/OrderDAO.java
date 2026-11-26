@@ -12,10 +12,9 @@ import utils.JdbcUtil;
 
 public class OrderDAO implements CrudDAO<Order, Integer> {
 
-    private static final String BASE_SQL =
-            "SELECT id, customer_id, staff_id, shift_id, pager_id, order_type, total_amount, "
-          + "discount_amount, final_amount, status, payment_method, customer_name, customer_phone, note, order_date "
-          + "FROM orders";
+    private static final String BASE_SQL = "SELECT id, customer_id, staff_id, shift_id, pager_id, order_type, total_amount, "
+            + "discount_amount, final_amount, status, payment_method, customer_name, customer_phone, note, order_date "
+            + "FROM orders";
 
     @Override
     public int create(Order e) {
@@ -25,20 +24,20 @@ public class OrderDAO implements CrudDAO<Order, Integer> {
                 + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, COALESCE(?, NOW())) RETURNING id";
         ResultSet rs = null;
         try {
-            rs = JdbcUtil.executeQuery(sql, 
-            		e.getCustomerId(), 
-            		e.getStaffId(), 
-            		e.getShiftId(),
-                    e.getPagerId(), 
-                    e.getOrderType(), 
-                    e.getTotalAmount(), 
+            rs = JdbcUtil.executeQuery(sql,
+                    e.getCustomerId(),
+                    e.getStaffId(),
+                    e.getShiftId(),
+                    e.getPagerId(),
+                    e.getOrderType(),
+                    e.getTotalAmount(),
                     e.getDiscountAmount(),
-                    e.getFinalAmount(), 
-                    e.getStatus(), 
+                    e.getFinalAmount(),
+                    e.getStatus(),
                     e.getPaymentMethod(),
-                    e.getCustomerName(), 
-                    e.getCustomerPhone(), 
-                    e.getNote(), 
+                    e.getCustomerName(),
+                    e.getCustomerPhone(),
+                    e.getNote(),
                     e.getOrderDate());
             if (rs.next()) {
                 e.setId(rs.getInt("id"));
@@ -57,18 +56,18 @@ public class OrderDAO implements CrudDAO<Order, Integer> {
         String sql = "UPDATE orders SET customer_id=?, staff_id=?, shift_id=?, pager_id=?, order_type=?, "
                 + "total_amount=?, discount_amount=?, final_amount=?, status=?, payment_method=?, "
                 + "customer_name=?, customer_phone=?, note=? WHERE id=?";
-        return execUpdate(sql, 
-        		e.getCustomerId(), 
-        		e.getStaffId(), 
-        		e.getShiftId(), 
-        		e.getPagerId(),
-                e.getOrderType(), 
-                e.getTotalAmount(), 
-                e.getDiscountAmount(), 
+        return execUpdate(sql,
+                e.getCustomerId(),
+                e.getStaffId(),
+                e.getShiftId(),
+                e.getPagerId(),
+                e.getOrderType(),
+                e.getTotalAmount(),
+                e.getDiscountAmount(),
                 e.getFinalAmount(),
-                e.getStatus(), 
-                e.getPaymentMethod(), 
-                e.getCustomerName(), 
+                e.getStatus(),
+                e.getPaymentMethod(),
+                e.getCustomerName(),
                 e.getCustomerPhone(),
                 e.getNote(), e.getId());
     }
@@ -141,7 +140,9 @@ public class OrderDAO implements CrudDAO<Order, Integer> {
         if (keyword != null && !keyword.trim().isEmpty()) {
             String kw = "%" + keyword.trim() + "%";
             sql.append(" AND (customer_name ILIKE ? OR customer_phone ILIKE ? OR CAST(id AS TEXT) ILIKE ?)");
-            params.add(kw); params.add(kw); params.add(kw);
+            params.add(kw);
+            params.add(kw);
+            params.add(kw);
         }
         if (status != null && !status.trim().isEmpty()) {
             sql.append(" AND status = ?");
@@ -154,7 +155,8 @@ public class OrderDAO implements CrudDAO<Order, Integer> {
         int safeSize = Math.max(1, pageSize);
         int offset = (Math.max(1, page) - 1) * safeSize;
         sql.append(" ORDER BY order_date DESC, id DESC LIMIT ? OFFSET ?");
-        params.add(safeSize); params.add(offset);
+        params.add(safeSize);
+        params.add(offset);
         return findBySql(sql.toString(), params.toArray());
     }
 
@@ -192,10 +194,14 @@ public class OrderDAO implements CrudDAO<Order, Integer> {
     }
 
     private void close(ResultSet rs) {
-        if (rs == null) return;
+        if (rs == null)
+            return;
         try {
             Statement st = rs.getStatement();
-            try (Connection c = (st != null ? st.getConnection() : null)) { rs.close(); }
-        } catch (SQLException ignored) {}
+            try (Connection c = (st != null ? st.getConnection() : null)) {
+                rs.close();
+            }
+        } catch (SQLException ignored) {
+        }
     }
 }

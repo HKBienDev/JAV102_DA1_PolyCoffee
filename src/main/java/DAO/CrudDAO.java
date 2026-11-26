@@ -8,7 +8,7 @@ public interface CrudDAO<Entity, ID> {
     int update(Entity entity);
 
     int delete(ID id);
-    
+
     int count();
 
     List<Entity> findAll();

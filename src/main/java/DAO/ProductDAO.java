@@ -1,5 +1,8 @@
 package DAO;
 
+import java.math.BigDecimal;
+import java.util.HashMap;
+import java.util.Map;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -11,7 +14,6 @@ import entity.Product;
 import utils.JdbcUtil;
 
 public class ProductDAO implements CrudDAO<Product, Integer> {
-    // Chuyển 1 dòng dữ liệu từ ResultSet thành đối tượng Product
     private Product mapRow(ResultSet rs) throws SQLException {
         return Product.builder()
                 .id(rs.getInt("id"))
@@ -24,7 +26,6 @@ public class ProductDAO implements CrudDAO<Product, Integer> {
                 .build();
     }
 
-    // Đóng kết nối an toàn sau khi dùng JdbcUtil.executeQuery
     private void closeResultSet(ResultSet rs) {
         if (rs == null)
             return;
@@ -116,9 +117,9 @@ public class ProductDAO implements CrudDAO<Product, Integer> {
 
     @Override
     public int delete(Integer id) {
-        String sql = "DELETE FROM products WHERE id = ?";
         try {
-            return JdbcUtil.executeUpdate(sql, id);
+            JdbcUtil.executeUpdate("DELETE FROM product_sizes WHERE product_id = ?", id);
+            return JdbcUtil.executeUpdate("DELETE FROM products WHERE id = ?", id);
         } catch (SQLException e) {
             throw new RuntimeException("Lỗi xóa Product", e);
         }
@@ -171,7 +172,6 @@ public class ProductDAO implements CrudDAO<Product, Integer> {
         return list.isEmpty() ? null : list.get(0);
     }
 
-    // Lấy các món đang bán (is_available = true)
     public List<Product> findAllAvailable() {
         String sql = "SELECT p.* FROM products p "
                 + "JOIN categories c ON p.category_id = c.id "
@@ -185,7 +185,6 @@ public class ProductDAO implements CrudDAO<Product, Integer> {
         return findBySql(sql, categoryId);
     }
 
-    // Lọc món theo danh mục
     public List<Product> findAvailableByCategoryId(int categoryId) {
         String sql = "SELECT p.* FROM products p "
                 + "JOIN categories c ON p.category_id = c.id "
@@ -194,8 +193,6 @@ public class ProductDAO implements CrudDAO<Product, Integer> {
         return findBySql(sql, categoryId);
     }
 
-    // Tìm kiếm món theo tên (dùng ILIKE để không phân biệt hoa/thường trong
-    // PostgreSQL)
     public List<Product> searchByName(String keyword) {
         if (keyword == null || keyword.isBlank()) {
             return findAll();
@@ -204,13 +201,55 @@ public class ProductDAO implements CrudDAO<Product, Integer> {
         return findBySql(sql, "%" + keyword.trim() + "%");
     }
 
-    // Bật/tắt nhanh trạng thái còn hàng
     public int updateAvailable(int id, boolean isAvailable) {
         String sql = "UPDATE products SET is_available = ? WHERE id = ?";
         try {
             return JdbcUtil.executeUpdate(sql, isAvailable, id);
         } catch (SQLException e) {
             throw new RuntimeException("Lỗi cập nhật trạng thái Product", e);
+        }
+    }
+
+    public void savePrice(int productId, BigDecimal price) {
+        String updateSql = "UPDATE product_sizes SET price = ? WHERE product_id = ?";
+        try {
+            int rows = JdbcUtil.executeUpdate(updateSql, price, productId);
+            if (rows == 0) {
+                String insertSql = "INSERT INTO product_sizes (product_id, size, price, is_available) VALUES (?, 'M', ?, TRUE)";
+                JdbcUtil.executeUpdate(insertSql, productId, price);
+            }
+        } catch (SQLException e) {
+            throw new RuntimeException("Lỗi lưu giá Product", e);
+        }
+    }
+
+    public BigDecimal getPriceByProductId(int productId) {
+        String sql = "SELECT price FROM product_sizes WHERE product_id = ? ORDER BY id ASC LIMIT 1";
+        ResultSet rs = null;
+        try {
+            rs = JdbcUtil.executeQuery(sql, productId);
+            return rs.next() ? rs.getBigDecimal("price") : BigDecimal.ZERO;
+        } catch (SQLException e) {
+            throw new RuntimeException("Lỗi lấy giá Product", e);
+        } finally {
+            closeResultSet(rs);
+        }
+    }
+
+    public Map<Integer, BigDecimal> getAllProductPrices() {
+        String sql = "SELECT product_id, price FROM product_sizes ORDER BY id ASC";
+        Map<Integer, BigDecimal> priceMap = new HashMap<>();
+        ResultSet rs = null;
+        try {
+            rs = JdbcUtil.executeQuery(sql);
+            while (rs.next()) {
+                priceMap.putIfAbsent(rs.getInt("product_id"), rs.getBigDecimal("price"));
+            }
+            return priceMap;
+        } catch (SQLException e) {
+            throw new RuntimeException("Lỗi lấy danh sách giá Product", e);
+        } finally {
+            closeResultSet(rs);
         }
     }
 }

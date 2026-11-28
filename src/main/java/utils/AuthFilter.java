@@ -11,28 +11,37 @@ import jakarta.servlet.annotation.WebFilter;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
-@WebFilter({"/admin/*", "/staff/*", "/pos/*", "/bills/*"})
+@WebFilter({ "/admin/*", "/staff/*", "/pos/*", "/bills/*" })
 public class AuthFilter implements Filter {
 
 	@Override
-	public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain) 
+	public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain)
 			throws IOException, ServletException {
-		
+
 		HttpServletRequest req = (HttpServletRequest) request;
 		HttpServletResponse resp = (HttpServletResponse) response;
-		
+
 		if (!AuthUtil.isAuthenticated(req)) {
-			resp.sendRedirect(req.getContextPath()+ "/login");
+			resp.sendRedirect(req.getContextPath() + "/login");
 			return;
 		}
-		
+
 		String uri = req.getRequestURI();
 		String adminPrefix = req.getContextPath() + "/admin";
 		if (uri.startsWith(adminPrefix) && !AuthUtil.isAdmin(req)) {
 			resp.sendError(HttpServletResponse.SC_FORBIDDEN, "Bạn không có quyền truy cập chức năng này!");
 			return;
 		}
-		
+
+		String contextPath = req.getContextPath();
+		if ((uri.startsWith(contextPath + "/staff")
+				|| uri.startsWith(contextPath + "/pos")
+				|| uri.startsWith(contextPath + "/bills"))
+				&& !AuthUtil.isStaffOrAdmin(req)) {
+			resp.sendError(HttpServletResponse.SC_FORBIDDEN, "Chỉ Nhân viên hoặc Quản trị viên mới được truy cập!");
+			return;
+		}
+
 		chain.doFilter(request, response);
 	}
 }
